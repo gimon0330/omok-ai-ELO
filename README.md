@@ -17,7 +17,45 @@
 
 `policy`도 지원하지만, 현재 `policy-net.js`는 TensorFlow.js와 `./assets/policy-net/model.json`이 없으면 내부 fallback으로 `tacticalMove`를 사용합니다. 그래서 기본 목록에서는 제외했습니다. 전체를 강제로 돌리고 싶으면 `--models all`을 사용하면 됩니다.
 
-## 빠른 실행
+## GitHub Actions로 실행하기
+
+로컬 PC에서 `cmd`, `PowerShell`, `node`, `npm`을 사용할 수 없는 환경에서는 GitHub Actions를 사용하면 됩니다. 이 레포에는 버튼으로 실행 가능한 workflow가 들어 있습니다.
+
+실행 순서:
+
+1. GitHub에서 `gimon0330/omok-ai-ELO` 레포로 이동합니다.
+2. 상단의 **Actions** 탭을 누릅니다.
+3. 왼쪽 목록에서 **Run Omok AI Elo**를 선택합니다.
+4. 오른쪽의 **Run workflow** 버튼을 누릅니다.
+5. `games`, `depth`, `models`, `seed` 값을 입력합니다.
+6. 다시 **Run workflow**를 눌러 실행합니다.
+7. 실행이 끝나면 해당 run에 들어가서 **Summary**에서 결과를 확인합니다.
+8. 더 자세한 결과는 하단의 **Artifacts**에서 `omok-elo-results`를 다운로드합니다.
+
+기본 입력값은 다음과 같습니다.
+
+| 입력값 | 의미 | 기본값 |
+| --- | --- | --- |
+| `games` | 각 모델 쌍마다 진행할 게임 수 | `10` |
+| `depth` | 각 모델에 넘길 탐색 깊이 | `2` |
+| `models` | 평가할 모델 목록 또는 `all` | `greedy,pattern,search,tactical,threat,mcts` |
+| `seed` | MCTS 등 난수 모델을 위한 seed | `20260523` |
+| `max_plies` | 이 수 이상 착수하면 무승부 처리 | `225` |
+| `move_timeout_ms` | 한 수 제한 시간. `0`이면 비활성화 | `0` |
+
+Actions는 내부적으로 다음 작업을 수행합니다.
+
+```text
+1. omok-ai-ELO checkout
+2. omok-web-ai checkout
+3. Node.js 22 설치
+4. npm test 실행
+5. Elo tournament 실행
+6. results/elo.log, results/elo.json, results/elo.csv 생성
+7. 결과를 GitHub Summary와 Artifact로 업로드
+```
+
+## 로컬에서 빠른 실행
 
 두 레포를 같은 부모 폴더에 둔 경우를 기준으로 합니다.
 
@@ -83,6 +121,8 @@ Rank  Model     Elo     W-L-D   Score%  Win%   Avg ms/move  Illegal
 ## 구조
 
 ```text
+.github/workflows/
+  run-elo.yml       GitHub Actions 실행 workflow
 src/
   cli.js            CLI entrypoint
   model-loader.js   omok-web-ai 모델 파일을 Node vm으로 로드
