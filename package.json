@@ -1,0 +1,23 @@
+{
+  "name": "omok-ai-elo",
+  "version": "0.1.0",
+  "description": "Head-to-head Elo evaluator for omok-web-ai models.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node src/cli.js",
+    "elo": "node src/cli.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "gomoku",
+    "omok",
+    "elo",
+    "ai",
+    "benchmark"
+  ],
+  "license": "MIT"
+}
