@@ -1,0 +1,118 @@
+name: Run Omok AI Elo
+
+on:
+  workflow_dispatch:
+    inputs:
+      games:
+        description: "Games per model pair"
+        required: true
+        default: "10"
+      depth:
+        description: "Search depth passed to each model"
+        required: true
+        default: "2"
+      models:
+        description: "Comma-separated model IDs, or all"
+        required: true
+        default: "greedy,pattern,search,tactical,threat,mcts"
+      seed:
+        description: "Seed for deterministic random behavior"
+        required: true
+        default: "20260523"
+      max_plies:
+        description: "Draw after this many plies"
+        required: true
+        default: "225"
+      move_timeout_ms:
+        description: "Move timeout in ms. Use 0 to disable"
+        required: true
+        default: "0"
+
+jobs:
+  run-elo:
+    name: Run Elo tournament
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout omok-ai-ELO
+        uses: actions/checkout@v4
+        with:
+          path: omok-ai-ELO
+
+      - name: Checkout omok-web-ai
+        uses: actions/checkout@v4
+        with:
+          repository: gimon0330/omok-web-ai
+          path: omok-web-ai
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Show runtime versions
+        working-directory: omok-ai-ELO
+        run: |
+          node -v
+          npm -v
+
+      - name: Run tests
+        working-directory: omok-ai-ELO
+        run: npm test
+
+      - name: Run Elo tournament
+        working-directory: omok-ai-ELO
+        run: |
+          mkdir -p results
+          npm start -- \
+            --source ../omok-web-ai \
+            --games "${{ github.event.inputs.games }}" \
+            --depth "${{ github.event.inputs.depth }}" \
+            --models "${{ github.event.inputs.models }}" \
+            --seed "${{ github.event.inputs.seed }}" \
+            --max-plies "${{ github.event.inputs.max_plies }}" \
+            --move-timeout-ms "${{ github.event.inputs.move_timeout_ms }}" \
+            --json results/elo.json \
+            --csv results/elo.csv \
+            | tee results/elo.log
+
+      - name: Write job summary
+        working-directory: omok-ai-ELO
+        if: always()
+        run: |
+          echo "# Omok AI Elo Result" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- games per pair: ${{ github.event.inputs.games }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- depth: ${{ github.event.inputs.depth }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- models: ${{ github.event.inputs.models }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- seed: ${{ github.event.inputs.seed }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Console output" >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          if [ -f results/elo.log ]; then
+            tail -n 80 results/elo.log >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No elo.log was produced." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Ranking CSV" >> "$GITHUB_STEP_SUMMARY"
+          echo '```csv' >> "$GITHUB_STEP_SUMMARY"
+          if [ -f results/elo.csv ]; then
+            cat results/elo.csv >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No elo.csv was produced." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: omok-elo-results
+          path: |
+            omok-ai-ELO/results/elo.json
+            omok-ai-ELO/results/elo.csv
+            omok-ai-ELO/results/elo.log
+          if-no-files-found: warn
